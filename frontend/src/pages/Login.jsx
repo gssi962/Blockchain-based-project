@@ -1,3 +1,4 @@
+import { loginUser } from "../services/api";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -9,26 +10,39 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
+    setError("");
+
     if (!email.trim() || !password) {
+      setError("Email and password are required");
       return;
     }
 
-    const demoUser = {
-      id: "demo-admin-001",
-      name: "CRYPTA Admin",
-      email: email,
-      role: "ADMIN",
-      organization: "CRYPTA SHIELD",
-      did: "did:crypta:admin001",
-    };
+    try {
+      setLoading(true);
 
-    login(demoUser, "demo-token");
+      const response = await loginUser(email, password);
+if (response.success && response.token) {
+  login(response.user, response.token);
+  navigate("/dashboard");
+} else {
+  setError(response.message || "Login failed");
+}
+    } catch (error) {
+      console.error("Login failed:", error);
 
-    navigate("/dashboard");
+      setError(
+        error.response?.data?.message ||
+        "Invalid email or password"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -46,7 +60,6 @@ function Login() {
           <p>BLOCKCHAIN ASSET SECURITY PLATFORM</p>
         </div>
 
-
         <div className="crypta-login-card">
 
           <div className="crypta-login-heading">
@@ -59,11 +72,12 @@ function Login() {
             </p>
           </div>
 
-
           <form
             className="crypta-login-form"
             onSubmit={handleSubmit}
           >
+
+            {/* EMAIL */}
 
             <div className="crypta-field">
 
@@ -75,12 +89,18 @@ function Login() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError("");
+                }}
                 placeholder="Enter your email"
+                autoComplete="email"
               />
 
             </div>
 
+
+            {/* PASSWORD */}
 
             <div className="crypta-field">
 
@@ -94,8 +114,12 @@ function Login() {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setError("");
+                  }}
                   placeholder="Enter your password"
+                  autoComplete="current-password"
                 />
 
                 <button
@@ -103,6 +127,11 @@ function Login() {
                   className="crypta-eye"
                   onClick={() =>
                     setShowPassword((prev) => !prev)
+                  }
+                  aria-label={
+                    showPassword
+                      ? "Hide password"
+                      : "Show password"
                   }
                 >
                   {showPassword ? "◉" : "◌"}
@@ -113,12 +142,25 @@ function Login() {
             </div>
 
 
+            {/* ERROR MESSAGE */}
+
+            {error && (
+              <div className="crypta-login-error">
+                {error}
+              </div>
+            )}
+
+
+            {/* OPTIONS */}
+
             <div className="crypta-login-options">
 
               <label className="crypta-remember">
+
                 <input type="checkbox" />
 
                 <span>Remember me</span>
+
               </label>
 
               <button
@@ -131,15 +173,22 @@ function Login() {
             </div>
 
 
+            {/* LOGIN BUTTON */}
+
             <button
               type="submit"
               className="crypta-login-button"
+              disabled={loading}
             >
-              SECURE LOGIN
+              {loading
+                ? "AUTHENTICATING..."
+                : "SECURE LOGIN"}
             </button>
 
           </form>
 
+
+          {/* SECURITY MESSAGE */}
 
           <div className="crypta-security">
 
@@ -148,12 +197,16 @@ function Login() {
             </div>
 
             <div>
-              <strong>BLOCKCHAIN SECURED</strong>
+
+              <strong>
+                BLOCKCHAIN SECURED
+              </strong>
 
               <p>
                 Your identity and transactions are
                 protected by blockchain technology.
               </p>
+
             </div>
 
           </div>
@@ -161,10 +214,16 @@ function Login() {
         </div>
 
 
+        {/* FOOTER */}
+
         <div className="crypta-login-footer">
+
           CRYPTA SHIELD
+
           <span>•</span>
+
           SECURE DIGITAL ECOSYSTEM
+
         </div>
 
       </div>

@@ -23,12 +23,17 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = (userData, authToken) => {
-    setUser(userData);
-    setToken(authToken);
+  if (!authToken) {
+    console.error("Login token missing");
+    return;
+  }
 
-    localStorage.setItem("token", authToken);
-    localStorage.setItem("user", JSON.stringify(userData));
-  };
+  localStorage.setItem("token", authToken);
+  localStorage.setItem("user", JSON.stringify(userData));
+
+  setToken(authToken);
+  setUser(userData);
+};
 
   const logout = () => {
     setUser(null);

@@ -45,11 +45,18 @@ function IdentityManagement() {
 
       const response = await fetchUsers();
 
-      setUsers(
-        response?.data ??
-        response ??
-        []
-      );
+     const userData =
+  response?.data?.users ||
+  response?.data ||
+  response?.users ||
+  response ||
+  [];
+
+setUsers(
+  Array.isArray(userData)
+    ? userData
+    : []
+);
     } catch (err) {
       console.error("Users loading error:", err);
     } finally {

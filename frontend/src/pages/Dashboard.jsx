@@ -37,6 +37,21 @@ function Dashboard() {
   const [transactions, setTransactions] = useState([]);
   const [activity, setActivity] = useState([]);
 
+  // Safely convert API response into an array
+  const toArray = (value, key) => {
+    const data = value?.data ?? value;
+
+    if (Array.isArray(data)) {
+      return data;
+    }
+
+    if (Array.isArray(data?.[key])) {
+      return data[key];
+    }
+
+    return [];
+  };
+
   useEffect(() => {
     loadDashboard();
   }, []);
@@ -57,54 +72,90 @@ function Dashboard() {
         fetchTransactions(),
       ]);
 
+      // -----------------------------
+      // DASHBOARD STATS
+      // -----------------------------
       if (statsResponse.status === "fulfilled") {
+        const statsData =
+          statsResponse.value?.data ??
+          statsResponse.value ??
+          {};
+
         setStats({
-          users:
-            statsResponse.value?.users ??
-            statsResponse.value?.totalUsers ??
-            0,
+          users: Number(
+            statsData.users ??
+              statsData.totalUsers ??
+              0
+          ),
 
-          assets:
-            statsResponse.value?.assets ??
-            statsResponse.value?.totalAssets ??
-            0,
+          assets: Number(
+            statsData.assets ??
+              statsData.totalAssets ??
+              0
+          ),
 
-          nfts:
-            statsResponse.value?.nfts ??
-            statsResponse.value?.totalNFTs ??
-            0,
+          nfts: Number(
+            statsData.nfts ??
+              statsData.totalNFTs ??
+              0
+          ),
 
-          transactions:
-            statsResponse.value?.transactions ??
-            statsResponse.value?.totalTransactions ??
-            0,
+          transactions: Number(
+            statsData.transactions ??
+              statsData.totalTransactions ??
+              0
+          ),
         });
       }
 
+      // -----------------------------
+      // RECENT ACTIVITY
+      // -----------------------------
       if (activityResponse.status === "fulfilled") {
         setActivity(
-          activityResponse.value?.data ??
-          activityResponse.value ??
-          []
+          toArray(
+            activityResponse.value,
+            "activity"
+          )
         );
+      } else {
+        setActivity([]);
       }
 
+      // -----------------------------
+      // BLOCKCHAIN STATUS
+      // -----------------------------
       if (blockchainResponse.status === "fulfilled") {
-        setBlockchain(
+        const blockchainData =
           blockchainResponse.value?.data ??
-          blockchainResponse.value
-        );
+          blockchainResponse.value;
+
+        if (blockchainData) {
+          setBlockchain(blockchainData);
+        }
       }
 
+      // -----------------------------
+      // TRANSACTIONS
+      // -----------------------------
       if (transactionsResponse.status === "fulfilled") {
         setTransactions(
-          transactionsResponse.value?.data ??
-          transactionsResponse.value ??
-          []
+          toArray(
+            transactionsResponse.value,
+            "transactions"
+          )
         );
+      } else {
+        setTransactions([]);
       }
     } catch (error) {
-      console.error("Dashboard loading error:", error);
+      console.error(
+        "Dashboard loading error:",
+        error
+      );
+
+      setTransactions([]);
+      setActivity([]);
     } finally {
       setLoading(false);
     }
@@ -177,7 +228,9 @@ function Dashboard() {
               <p>
                 Welcome back,{" "}
                 <strong>
-                  {user?.name || user?.email || "Administrator"}
+                  {user?.name ||
+                    user?.email ||
+                    "Administrator"}
                 </strong>
                 . Monitor your blockchain ecosystem.
               </p>
@@ -191,7 +244,6 @@ function Dashboard() {
               ↻ Refresh
             </Button>
           </div>
-
 
           {/* STAT CARDS */}
           <section className="stats-grid">
@@ -208,7 +260,9 @@ function Dashboard() {
               </div>
 
               <div className="stat-value">
-                {loading ? "—" : stats.users.toLocaleString()}
+                {loading
+                  ? "—"
+                  : stats.users.toLocaleString()}
               </div>
 
               <div className="stat-footer">
@@ -218,7 +272,6 @@ function Dashboard() {
                 <span>Verified accounts</span>
               </div>
             </div>
-
 
             <div className="stat-card">
               <div className="stat-card-top">
@@ -232,7 +285,9 @@ function Dashboard() {
               </div>
 
               <div className="stat-value">
-                {loading ? "—" : stats.assets.toLocaleString()}
+                {loading
+                  ? "—"
+                  : stats.assets.toLocaleString()}
               </div>
 
               <div className="stat-footer">
@@ -242,7 +297,6 @@ function Dashboard() {
                 <span>Blockchain assets</span>
               </div>
             </div>
-
 
             <div className="stat-card">
               <div className="stat-card-top">
@@ -256,7 +310,9 @@ function Dashboard() {
               </div>
 
               <div className="stat-value">
-                {loading ? "—" : stats.nfts.toLocaleString()}
+                {loading
+                  ? "—"
+                  : stats.nfts.toLocaleString()}
               </div>
 
               <div className="stat-footer">
@@ -266,7 +322,6 @@ function Dashboard() {
                 <span>Digital ownership</span>
               </div>
             </div>
-
 
             <div className="stat-card">
               <div className="stat-card-top">
@@ -294,7 +349,6 @@ function Dashboard() {
             </div>
 
           </section>
-
 
           {/* BLOCKCHAIN + QUICK ACTIONS */}
           <section className="dashboard-grid">
@@ -367,7 +421,6 @@ function Dashboard() {
               </div>
             </div>
 
-
             {/* QUICK ACTIONS */}
             <div className="dashboard-card">
 
@@ -405,7 +458,6 @@ function Dashboard() {
                   </span>
                 </button>
 
-
                 <button
                   className="quick-action"
                   onClick={() =>
@@ -428,7 +480,6 @@ function Dashboard() {
                   </span>
                 </button>
 
-
                 <button
                   className="quick-action"
                   onClick={() =>
@@ -450,7 +501,6 @@ function Dashboard() {
                     →
                   </span>
                 </button>
-
 
                 <button
                   className="quick-action"
@@ -478,7 +528,6 @@ function Dashboard() {
             </div>
 
           </section>
-
 
           {/* RECENT TRANSACTIONS */}
           <section className="dashboard-card">
@@ -544,7 +593,13 @@ function Dashboard() {
                     transactions
                       .slice(0, 5)
                       .map((tx, index) => (
-                        <tr key={tx.id || tx.txId || index}>
+                        <tr
+                          key={
+                            tx.id ||
+                            tx.txId ||
+                            index
+                          }
+                        >
 
                           <td>
                             <span className="tx-id">
@@ -586,7 +641,8 @@ function Dashboard() {
                               )}`}
                             >
                               <span className="status-dot"></span>
-                              {tx.status || "Unknown"}
+                              {tx.status ||
+                                "Unknown"}
                             </span>
                           </td>
 
@@ -601,7 +657,6 @@ function Dashboard() {
             </div>
 
           </section>
-
 
           {/* ACTIVITY */}
           <section className="dashboard-card">
@@ -635,47 +690,49 @@ function Dashboard() {
                   No recent security activity.
                 </div>
               ) : (
-                activity.slice(0, 6).map((item, index) => (
-                  <div
-                    className="activity-item"
-                    key={item.id || index}
-                  >
+                activity
+                  .slice(0, 6)
+                  .map((item, index) => (
+                    <div
+                      className="activity-item"
+                      key={item.id || index}
+                    >
 
-                    <div className="activity-icon">
-                      {item.type === "TRANSFER"
-                        ? "⇄"
-                        : item.type === "USER"
-                        ? "◉"
-                        : item.type === "ASSET"
-                        ? "◈"
-                        : "◆"}
+                      <div className="activity-icon">
+                        {item.type === "TRANSFER"
+                          ? "⇄"
+                          : item.type === "USER"
+                          ? "◉"
+                          : item.type === "ASSET"
+                          ? "◈"
+                          : "◆"}
+                      </div>
+
+                      <div className="activity-content">
+
+                        <strong>
+                          {item.title ||
+                            item.action ||
+                            "System activity"}
+                        </strong>
+
+                        <span>
+                          {item.description ||
+                            item.message ||
+                            "Blockchain security event recorded."}
+                        </span>
+
+                      </div>
+
+                      <time>
+                        {formatDate(
+                          item.timestamp ||
+                            item.createdAt
+                        )}
+                      </time>
+
                     </div>
-
-                    <div className="activity-content">
-
-                      <strong>
-                        {item.title ||
-                          item.action ||
-                          "System activity"}
-                      </strong>
-
-                      <span>
-                        {item.description ||
-                          item.message ||
-                          "Blockchain security event recorded."}
-                      </span>
-
-                    </div>
-
-                    <time>
-                      {formatDate(
-                        item.timestamp ||
-                          item.createdAt
-                      )}
-                    </time>
-
-                  </div>
-                ))
+                  ))
               )}
 
             </div>

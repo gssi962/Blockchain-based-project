@@ -41,11 +41,18 @@ function Transactions() {
 
       const response = await fetchTransactions();
 
-      setTransactions(
-        response?.data ??
-        response ??
-        []
-      );
+      const txData =
+  response?.data?.transactions ||
+  response?.data ||
+  response?.transactions ||
+  response ||
+  [];
+
+setTransactions(
+  Array.isArray(txData)
+    ? txData
+    : []
+);
     } catch (error) {
       console.error(
         "Transaction loading error:",
