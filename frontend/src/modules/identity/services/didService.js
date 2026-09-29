@@ -1,6 +1,6 @@
 import * as ed from "@noble/ed25519";
 
-const API_URL = "https://blockchain-based-project.onrender.com/api";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 // =====================================================
 // HEX HELPERS
