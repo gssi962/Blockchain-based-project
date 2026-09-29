@@ -1,7 +1,9 @@
-const { store } = require("../config/database");
+const { pool } = require("../config/database");
+
 const { createId } = require("../utils");
 
-const createAuditLog = ({
+
+const createAuditLog = async ({
     action,
     category,
     description,
@@ -10,42 +12,107 @@ const createAuditLog = ({
     metadata = {}
 }) => {
 
-    const audit = {
-        id: createId("audit"),
+    const auditId = createId("audit");
+
+    await pool.execute(
+        `
+        INSERT INTO audit_logs
+        (
+            id,
+            action,
+            category,
+            description,
+            performed_by,
+            performed_by_did,
+            status,
+            metadata
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+            auditId,
+            action,
+            category,
+            description,
+            performedBy?.id || null,
+            performedBy?.did || null,
+            status,
+            JSON.stringify(metadata)
+        ]
+    );
+
+
+    return {
+        id: auditId,
         action,
         category,
         description,
-        performedBy: performedBy
-            ? performedBy.id
-            : null,
-        performedByDid: performedBy
-            ? performedBy.did
-            : null,
         status,
-        metadata,
-        timestamp: new Date().toISOString()
+        metadata
     };
-
-    store.auditLogs.push(audit);
-
-    return audit;
 };
 
-const getAllAuditLogs = () => {
-    return [...store.auditLogs].reverse();
-};
 
-const getAuditLogById = (id) => {
-    return store.auditLogs.find(
-        audit => audit.id === id
+
+const getAllAuditLogs = async () => {
+
+    const [rows] = await pool.execute(
+        `
+        SELECT
+            id,
+            action,
+            category,
+            description,
+            performed_by,
+            performed_by_did,
+            status,
+            metadata,
+            timestamp
+        FROM audit_logs
+        ORDER BY timestamp DESC
+        `
     );
+
+    return rows;
 };
 
-const getRecentAuditLogs = (limit = 10) => {
-    return [...store.auditLogs]
-        .reverse()
-        .slice(0, limit);
+
+
+const getAuditLogById = async (id) => {
+
+    const [rows] = await pool.execute(
+        `
+        SELECT *
+        FROM audit_logs
+        WHERE id = ?
+        LIMIT 1
+        `,
+        [id]
+    );
+
+    return rows.length
+        ? rows[0]
+        : null;
 };
+
+
+
+const getRecentAuditLogs = async (limit = 10) => {
+
+    const [rows] = await pool.execute(
+        `
+        SELECT *
+        FROM audit_logs
+        ORDER BY timestamp DESC
+        LIMIT ?
+        `,
+        [limit]
+    );
+
+    return rows;
+};
+
+
 
 module.exports = {
     createAuditLog,

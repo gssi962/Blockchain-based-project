@@ -4,7 +4,8 @@ const {
     getUsers,
     getUser,
     createUser,
-    updateUserRole
+    updateUserRole,
+    deleteUser
 } = require("../controllers/userController");
 
 const {
@@ -43,6 +44,13 @@ router.patch(
     authMiddleware,
     rbacMiddleware("ASSIGN_ROLE"),
     updateUserRole
+);
+
+router.delete(
+    "/:id",
+    authMiddleware,
+    rbacMiddleware("CREATE_USER"),
+    deleteUser
 );
 
 module.exports = router;

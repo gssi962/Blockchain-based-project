@@ -1,7 +1,11 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./pages/Login";
+import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+
 import Dashboard from "./pages/Dashboard";
+import Settings from "./pages/Settings";
 import IdentityManagement from "./pages/IdentityManagement";
 import RoleManagement from "./pages/RoleManagement";
 import AssetManagement from "./pages/AssetManagement";
@@ -15,7 +19,7 @@ function App() {
 
       {/* =========================
           DEFAULT ROUTE
-         ========================= */}
+          ========================= */}
 
       <Route
         path="/"
@@ -29,16 +33,26 @@ function App() {
 
       {/* =========================
           AUTH
-         ========================= */}
+          ========================= */}
 
       <Route
         path="/login"
         element={<Login />}
       />
 
+      <Route
+        path="/register"
+        element={<Register />}
+      />
+
+      <Route
+        path="/forgot-password"
+        element={<ForgotPassword />}
+      />
+
       {/* =========================
           DASHBOARD
-         ========================= */}
+          ========================= */}
 
       <Route
         path="/dashboard"
@@ -46,72 +60,69 @@ function App() {
       />
 
       {/* =========================
+          SETTINGS
+          ========================= */}
+
+      <Route
+        path="/settings"
+        element={<Settings />}
+      />
+
+      {/* =========================
           IDENTITY
-         ========================= */}
+          ========================= */}
 
       <Route
         path="/identity"
-        element={
-          <IdentityManagement />
-        }
+        element={<IdentityManagement />}
       />
 
       {/* =========================
           ROLES
-         ========================= */}
+          ========================= */}
 
       <Route
         path="/roles"
-        element={
-          <RoleManagement />
-        }
+        element={<RoleManagement />}
       />
 
       {/* =========================
           ASSETS
-         ========================= */}
+          ========================= */}
 
       <Route
         path="/assets"
-        element={
-          <AssetManagement />
-        }
+        element={<AssetManagement />}
       />
 
       {/* Dynamic Asset Details */}
 
       <Route
         path="/assets/:id"
-        element={
-          <AssetDetails />
-        }
+        element={<AssetDetails />}
       />
 
       {/* =========================
           TRANSACTIONS
-         ========================= */}
+          ========================= */}
 
       <Route
         path="/transactions"
-        element={
-          <Transactions />
-        }
+        element={<Transactions />}
       />
 
       {/* =========================
           AUDIT TRAIL
-         ========================= */}
+          ========================= */}
 
       <Route
         path="/audit-trail"
-        element={
-          <AuditTrail />
-        }
+        element={<AuditTrail />}
       />
 
       {/* =========================
           404 FALLBACK
-         ========================= */}
+          ========================= */}
 
       <Route
         path="*"

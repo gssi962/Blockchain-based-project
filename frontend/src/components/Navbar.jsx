@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import { useAuth } from "../hooks/useAuth";
 
 const Navbar = ({
   title = "Dashboard",
   onMenuClick,
 }) => {
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
 
   const [profileOpen, setProfileOpen] =
@@ -22,6 +25,16 @@ const Navbar = ({
   const userEmail =
     user?.email ||
     "admin@cryptashield.com";
+
+  const handleSettings = () => {
+    setProfileOpen(false);
+    navigate("/settings");
+  };
+
+  const handleLogout = () => {
+    setProfileOpen(false);
+    logout();
+  };
 
   return (
     <header className="navbar">
@@ -55,26 +68,8 @@ const Navbar = ({
         {/* Network status */}
         <div className="network-status">
           <span className="network-indicator"></span>
-
           <span>Network Online</span>
         </div>
-
-        {/* Notification */}
-        <button
-          className="notification-button"
-          onClick={() =>
-            alert("No new notifications")
-          }
-          aria-label="Notifications"
-        >
-          <span className="notification-icon">
-            ♢
-          </span>
-
-          <span className="notification-count">
-            3
-          </span>
-        </button>
 
         {/* Profile */}
         <div className="profile-container">
@@ -84,8 +79,8 @@ const Navbar = ({
             onClick={() =>
               setProfileOpen(!profileOpen)
             }
+            aria-expanded={profileOpen}
           >
-
             <div className="profile-avatar">
               {userName
                 .charAt(0)
@@ -103,7 +98,6 @@ const Navbar = ({
             <span className="profile-arrow">
               {profileOpen ? "▲" : "▼"}
             </span>
-
           </button>
 
           {/* Dropdown */}
@@ -111,6 +105,7 @@ const Navbar = ({
             <div className="profile-dropdown">
 
               <div className="dropdown-user-info">
+
                 <div className="dropdown-avatar">
                   {userName
                     .charAt(0)
@@ -121,36 +116,36 @@ const Navbar = ({
                   <strong>{userName}</strong>
                   <span>{userEmail}</span>
                 </div>
+
               </div>
 
               <div className="dropdown-divider"></div>
 
+              {/* Profile */}
               <button
                 className="dropdown-option"
-                onClick={() =>
-                  setProfileOpen(false)
-                }
+                onClick={() => {
+                  setProfileOpen(false);
+                  navigate("/profile");
+                }}
               >
                 ◉ &nbsp; Profile
               </button>
 
+              {/* Settings */}
               <button
                 className="dropdown-option"
-                onClick={() =>
-                  setProfileOpen(false)
-                }
+                onClick={handleSettings}
               >
                 ⚙ &nbsp; Settings
               </button>
 
               <div className="dropdown-divider"></div>
 
+              {/* Logout */}
               <button
                 className="dropdown-option dropdown-logout"
-                onClick={() => {
-                  setProfileOpen(false);
-                  logout();
-                }}
+                onClick={handleLogout}
               >
                 ↪ &nbsp; Logout
               </button>
@@ -161,6 +156,7 @@ const Navbar = ({
         </div>
 
       </div>
+
     </header>
   );
 };

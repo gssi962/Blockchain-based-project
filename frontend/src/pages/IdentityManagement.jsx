@@ -12,6 +12,7 @@ import {
   createUser,
   updateUser,
   deleteUser,
+  updateUserRole,
 } from "../services/api";
 
 function IdentityManagement() {
@@ -45,20 +46,23 @@ function IdentityManagement() {
 
       const response = await fetchUsers();
 
-     const userData =
-  response?.data?.users ||
-  response?.data ||
-  response?.users ||
-  response ||
-  [];
+      const userData =
+        response?.data?.users ||
+        response?.data ||
+        response?.users ||
+        response ||
+        [];
 
-setUsers(
-  Array.isArray(userData)
-    ? userData
-    : []
-);
+      setUsers(
+        Array.isArray(userData)
+          ? userData
+          : []
+      );
     } catch (err) {
-      console.error("Users loading error:", err);
+      console.error(
+        "Users loading error:",
+        err
+      );
     } finally {
       setLoading(false);
     }
@@ -74,11 +78,22 @@ setUsers(
   const openEditModal = (user) => {
     setEditingUser(user);
 
+    const roleMap = {
+      "role-admin": "ADMIN",
+      "role-manager": "MANAGER",
+      "role-auditor": "AUDITOR",
+      "role-user": "USER",
+    };
+
     setForm({
       name: user.name || "",
       email: user.email || "",
-      role: user.role || "USER",
-      organization: user.organization || "",
+      role:
+        roleMap[user.role_id] ||
+        user.role ||
+        "USER",
+      organization:
+        user.organization || "",
     });
 
     setError("");
@@ -95,7 +110,10 @@ setUsers(
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const {
+      name,
+      value,
+    } = e.target;
 
     setForm((prev) => ({
       ...prev,
@@ -108,12 +126,16 @@ setUsers(
     setError("");
 
     if (!form.name.trim()) {
-      setError("Full name is required.");
+      setError(
+        "Full name is required."
+      );
       return;
     }
 
     if (!form.email.trim()) {
-      setError("Email address is required.");
+      setError(
+        "Email address is required."
+      );
       return;
     }
 
@@ -121,17 +143,38 @@ setUsers(
       setSubmitting(true);
 
       if (editingUser) {
-        await updateUser(
-          editingUser.id || editingUser._id,
-          form
+        const userId =
+          editingUser.id ||
+          editingUser._id;
+
+        const roleId =
+          `role-${form.role.toLowerCase()}`;
+
+        await updateUserRole(
+          userId,
+          roleId,
+          form.organization.trim()
         );
       } else {
-        await createUser(form);
+        await createUser({
+          name: form.name.trim(),
+          email: form.email.trim(),
+          roleId:
+            `role-${form.role.toLowerCase()}`,
+          organization:
+            form.organization.trim(),
+        });
       }
 
       closeModal();
       await loadUsers();
+
     } catch (err) {
+      console.error(
+        "Identity update error:",
+        err
+      );
+
       setError(
         err.response?.data?.message ||
         "Unable to save identity. Please try again."
@@ -142,11 +185,14 @@ setUsers(
   };
 
   const handleDelete = async (user) => {
-    const id = user.id || user._id;
+    const id =
+      user.id ||
+      user._id;
 
-    const confirmed = window.confirm(
-      `Remove identity "${user.name}"?`
-    );
+    const confirmed =
+      window.confirm(
+        `Remove identity "${user.name}"?`
+      );
 
     if (!confirmed) return;
 
@@ -154,17 +200,49 @@ setUsers(
       await deleteUser(id);
       await loadUsers();
     } catch (err) {
-      console.error("Delete identity error:", err);
-      alert("Unable to remove this identity.");
+      console.error(
+        "Delete identity error:",
+        err
+      );
+
+      alert(
+        "Unable to remove this identity."
+      );
     }
   };
 
-  const getVerificationClass = (status) => {
-    const value = String(status || "").toLowerCase();
+  // =====================================================
+  // VERIFICATION HELPERS
+  // =====================================================
+
+  const isUserVerified = (user) => {
+    return (
+      Number(user?.verified) === 1 ||
+      user?.verified === true ||
+      String(
+        user?.verificationStatus || ""
+      ).toLowerCase() === "verified" ||
+      String(
+        user?.verification || ""
+      ).toLowerCase() === "verified"
+    );
+  };
+
+  const getVerificationStatus = (user) => {
+    return isUserVerified(user)
+      ? "Verified"
+      : "Pending";
+  };
+
+  const getVerificationClass = (
+    status
+  ) => {
+    const value =
+      String(status || "")
+        .toLowerCase();
 
     if (
-      value.includes("verified") ||
-      value.includes("active")
+      value.includes("verified")
     ) {
       return "status-success";
     }
@@ -186,12 +264,18 @@ setUsers(
     return "status-neutral";
   };
 
+  // =====================================================
+  // TABLE COLUMNS
+  // =====================================================
+
   const columns = [
     {
       key: "identity",
       label: "IDENTITY",
+
       render: (_, user) => (
         <div className="identity-cell">
+
           <div className="identity-avatar">
             {(user.name || "U")
               .charAt(0)
@@ -200,13 +284,16 @@ setUsers(
 
           <div>
             <strong>
-              {user.name || "Unknown User"}
+              {user.name ||
+                "Unknown User"}
             </strong>
 
             <span>
-              {user.email || "No email"}
+              {user.email ||
+                "No email"}
             </span>
           </div>
+
         </div>
       ),
     },
@@ -214,9 +301,11 @@ setUsers(
     {
       key: "did",
       label: "DID",
+
       render: (value) => (
         <span className="did-value">
-          {value || "did:crypta:pending"}
+          {value ||
+            "did:crypta:pending"}
         </span>
       ),
     },
@@ -224,16 +313,32 @@ setUsers(
     {
       key: "role",
       label: "ROLE",
-      render: (value) => (
-        <span className="role-badge">
-          {value || "USER"}
-        </span>
-      ),
+
+      render: (value, user) => {
+        const roleMap = {
+          "role-admin": "ADMIN",
+          "role-manager": "MANAGER",
+          "role-auditor": "AUDITOR",
+          "role-user": "USER",
+        };
+
+        const displayRole =
+          roleMap[user.role_id] ||
+          value ||
+          "PENDING";
+
+        return (
+          <span className="role-badge">
+            {displayRole}
+          </span>
+        );
+      },
     },
 
     {
       key: "organization",
       label: "ORGANIZATION",
+
       render: (value) => (
         <span>
           {value || "—"}
@@ -241,15 +346,17 @@ setUsers(
       ),
     },
 
+    // ===================================================
+    // FIXED VERIFICATION COLUMN
+    // ===================================================
+
     {
-      key: "verificationStatus",
+      key: "verified",
       label: "VERIFICATION",
-      render: (value, user) => {
+
+      render: (_, user) => {
         const status =
-          value ||
-          user.verification ||
-          user.status ||
-          "Pending";
+          getVerificationStatus(user);
 
         return (
           <span
@@ -258,6 +365,7 @@ setUsers(
             )}`}
           >
             <span className="status-dot"></span>
+
             {status}
           </span>
         );
@@ -267,6 +375,7 @@ setUsers(
     {
       key: "actions",
       label: "ACTIONS",
+
       render: (_, user) => (
         <div className="identity-actions">
 
@@ -277,7 +386,7 @@ setUsers(
               openEditModal(user);
             }}
           >
-            Edit
+            Assign Role
           </button>
 
           <button
@@ -295,117 +404,139 @@ setUsers(
     },
   ];
 
+  // =====================================================
+  // VERIFIED / PENDING COUNTS
+  // =====================================================
+
+  const verifiedCount =
+    users.filter(
+      (user) =>
+        isUserVerified(user)
+    ).length;
+
+  const pendingCount =
+    users.filter(
+      (user) =>
+        !user.role_id ||
+        !isUserVerified(user)
+    ).length;
+
   return (
     <div className="app-layout">
 
       <Sidebar
         isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
+        onClose={() =>
+          setSidebarOpen(false)
+        }
       />
 
       <div className="main-content">
 
         <Navbar
           title="Identity Management"
-          onMenuClick={() => setSidebarOpen(true)}
+          onMenuClick={() =>
+            setSidebarOpen(true)
+          }
         />
 
         <main className="page-content">
 
-          {/* HEADER */}
-
           <div className="page-header">
 
             <div>
+
               <div className="page-eyebrow">
                 CRYPTA SHIELD / IDENTITY
               </div>
 
-              <h1>Identity Management</h1>
+              <h1>
+                Identity Management
+              </h1>
 
               <p>
                 Manage decentralized identities,
                 verification and access roles.
               </p>
-            </div>
 
-            <Button
-              variant="primary"
-              onClick={openAddModal}
-            >
-              + Add Identity
-            </Button>
+            </div>
 
           </div>
 
-
-          {/* IDENTITY SUMMARY */}
+          {/* =================================================
+              SUMMARY CARDS
+          ================================================= */}
 
           <div className="identity-summary">
 
             <div className="identity-summary-card">
-              <span>Total Identities</span>
-              <strong>{users.length}</strong>
-            </div>
 
-            <div className="identity-summary-card">
-              <span>Verified</span>
+              <span>
+                Total Identities
+              </span>
+
               <strong>
-                {
-                  users.filter((user) =>
-                    String(
-                      user.verificationStatus ||
-                      user.verification ||
-                      user.status ||
-                      ""
-                    )
-                      .toLowerCase()
-                      .includes("verified")
-                  ).length
-                }
+                {users.length}
               </strong>
+
             </div>
 
             <div className="identity-summary-card">
-              <span>Pending</span>
+
+              <span>
+                Verified
+              </span>
+
               <strong>
-                {
-                  users.filter((user) =>
-                    String(
-                      user.verificationStatus ||
-                      user.verification ||
-                      user.status ||
-                      ""
-                    )
-                      .toLowerCase()
-                      .includes("pending")
-                  ).length
-                }
+                {verifiedCount}
               </strong>
+
             </div>
 
             <div className="identity-summary-card">
-              <span>DID Network</span>
+
+              <span>
+                Pending
+              </span>
+
+              <strong>
+                {pendingCount}
+              </strong>
+
+            </div>
+
+            <div className="identity-summary-card">
+
+              <span>
+                DID Network
+              </span>
+
               <strong className="summary-online">
                 ● Active
               </strong>
+
             </div>
 
           </div>
 
-
-          {/* TABLE CARD */}
+          {/* =================================================
+              REGISTERED IDENTITIES
+          ================================================= */}
 
           <div className="dashboard-card">
 
             <div className="card-header">
 
               <div>
+
                 <span className="card-eyebrow">
                   DECENTRALIZED IDENTITY
                 </span>
 
-                <h2>Registered Identities</h2>
+                <h2>
+                  Registered Identities
+                </h2>
+
               </div>
 
               <Button
@@ -425,14 +556,18 @@ setUsers(
               loading={loading}
               emptyMessage="No identities registered yet."
               onRowClick={(user) =>
-                console.log("Identity selected:", user)
+                console.log(
+                  "Identity selected:",
+                  user
+                )
               }
             />
 
           </div>
 
-
-          {/* SECURITY INFO */}
+          {/* =================================================
+              SECURITY CARD
+          ================================================= */}
 
           <div className="identity-security-card">
 
@@ -441,34 +576,44 @@ setUsers(
             </div>
 
             <div>
-              <h3>Decentralized Identity Security</h3>
+
+              <h3>
+                Decentralized Identity Security
+              </h3>
 
               <p>
-                Each registered identity is associated
-                with a unique DID and can be verified
-                before receiving blockchain permissions.
+                Each registered identity is
+                associated with a unique DID
+                and can be verified before
+                receiving blockchain permissions.
               </p>
+
             </div>
 
             <div className="security-status">
+
               <span className="status-dot"></span>
+
               DID Registry Active
+
             </div>
 
           </div>
 
         </main>
+
       </div>
 
-
-      {/* ADD / EDIT IDENTITY MODAL */}
+      {/* =====================================================
+          MODAL
+      ===================================================== */}
 
       <Modal
         isOpen={modalOpen}
         onClose={closeModal}
         title={
           editingUser
-            ? "Edit Identity"
+            ? "Assign Role"
             : "Create New Identity"
         }
         size="medium"
@@ -485,10 +630,11 @@ setUsers(
             </div>
           )}
 
-
           <div className="form-group">
 
-            <label>FULL NAME</label>
+            <label>
+              FULL NAME
+            </label>
 
             <input
               type="text"
@@ -496,14 +642,16 @@ setUsers(
               value={form.name}
               onChange={handleChange}
               placeholder="Enter full name"
+              disabled={!!editingUser}
             />
 
           </div>
 
-
           <div className="form-group">
 
-            <label>EMAIL ADDRESS</label>
+            <label>
+              EMAIL ADDRESS
+            </label>
 
             <input
               type="email"
@@ -511,34 +659,50 @@ setUsers(
               value={form.email}
               onChange={handleChange}
               placeholder="user@organization.com"
+              disabled={!!editingUser}
             />
 
           </div>
-
 
           <div className="form-row">
 
             <div className="form-group">
 
-              <label>ROLE</label>
+              <label>
+                ROLE
+              </label>
 
               <select
                 name="role"
                 value={form.role}
                 onChange={handleChange}
               >
-                <option value="USER">User</option>
-                <option value="AUDITOR">Auditor</option>
-                <option value="MANAGER">Manager</option>
-                <option value="ADMIN">Admin</option>
+
+                <option value="USER">
+                  User
+                </option>
+
+                <option value="AUDITOR">
+                  Auditor
+                </option>
+
+                <option value="MANAGER">
+                  Manager
+                </option>
+
+                <option value="ADMIN">
+                  Admin
+                </option>
+
               </select>
 
             </div>
 
-
             <div className="form-group">
 
-              <label>ORGANIZATION</label>
+              <label>
+                ORGANIZATION
+              </label>
 
               <input
                 type="text"
@@ -552,7 +716,6 @@ setUsers(
 
           </div>
 
-
           {!editingUser && (
             <div className="did-generation-info">
 
@@ -561,19 +724,43 @@ setUsers(
               </div>
 
               <div>
+
                 <strong>
                   DID will be generated automatically
                 </strong>
 
                 <span>
-                  A decentralized identifier will be
-                  created during registration.
+                  A decentralized identifier will
+                  be created during registration.
                 </span>
+
               </div>
 
             </div>
           )}
 
+          {editingUser && (
+            <div className="did-generation-info">
+
+              <div className="did-mini-icon">
+                ◆
+              </div>
+
+              <div>
+
+                <strong>
+                  Role Assignment
+                </strong>
+
+                <span>
+                  The selected role will be assigned
+                  to this identity by the administrator.
+                </span>
+
+              </div>
+
+            </div>
+          )}
 
           <div className="modal-actions">
 
@@ -592,7 +779,7 @@ setUsers(
               loading={submitting}
             >
               {editingUser
-                ? "Save Changes"
+                ? "Assign Role"
                 : "Create Identity"}
             </Button>
 

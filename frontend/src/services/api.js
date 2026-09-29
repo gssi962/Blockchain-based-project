@@ -1,365 +1,556 @@
 import axios from "axios";
 
-// =====================================
-// AXIOS INSTANCE
-// =====================================
-
 const api = axios.create({
-    baseURL:
-        import.meta.env.VITE_API_URL ||
-        "http://localhost:5000/api",
 
-    headers: {
-        "Content-Type": "application/json",
-    },
+  baseURL:
+    import.meta.env.VITE_API_URL ||
+    "http://localhost:5000/api",
+
+  headers: {
+    "Content-Type": "application/json",
+  },
+
 });
-const savedToken = localStorage.getItem("token");
+
+// =====================================================
+// LOAD SAVED TOKEN
+// =====================================================
+
+const savedToken =
+  localStorage.getItem("token");
 
 if (savedToken) {
-  api.defaults.headers.common.Authorization = `Bearer ${savedToken}`;
+
+  api.defaults.headers.common.Authorization =
+    `Bearer ${savedToken}`;
+
 }
 
-// =====================================
-// AUTH TOKEN
-// =====================================
+// =====================================================
+// REQUEST INTERCEPTOR
+// =====================================================
 
 api.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem("token");
 
-        if (token) {
-            config.headers = config.headers || {};
-            config.headers.Authorization = `Bearer ${token}`;
-        }
+  (config) => {
 
-        return config;
-    },
-    (error) => Promise.reject(error)
-);
+    const token =
+      localStorage.getItem("token");
 
-// =====================================
-// RESPONSE HANDLER
-// =====================================
+    if (token) {
 
-api.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        
-        
+      config.headers =
+        config.headers || {};
 
-        return Promise.reject(error);
+      config.headers.Authorization =
+        `Bearer ${token}`;
+
     }
+
+    return config;
+
+  },
+
+  (error) =>
+    Promise.reject(error)
+
 );
 
-// =====================================
-// AUTHENTICATION
-// =====================================
+// =====================================================
+// AUTH
+// =====================================================
 
-export const loginUser = async (email, password) => {
-    const response = await api.post("/auth/login", {
+export const loginUser = async (
+  email,
+  password
+) => {
+
+  const response =
+    await api.post(
+      "/auth/login",
+      {
         email,
         password,
-    });
-    if (response.data?.token) {
-    localStorage.setItem("token", response.data.token);
+      }
+    );
+
+  if (response.data?.token) {
+
+    localStorage.setItem(
+      "token",
+      response.data.token
+    );
+
     api.defaults.headers.common.Authorization =
       `Bearer ${response.data.token}`;
+
   }
 
-    return response.data;
+  return response.data;
+
 };
 
+export const registerUser = async (
+  data
+) => {
+
+  const response =
+    await api.post(
+      "/auth/register",
+      data
+    );
+
+  return response.data;
+
+};
+
+// =====================================================
+// EMAIL OTP
+// =====================================================
+
+export const verifyEmailOTP = async (
+  email,
+  otp
+) => {
+
+  const response =
+    await api.post(
+      "/auth/verify-email-otp",
+      {
+        email,
+        otp,
+      }
+    );
+
+  return response.data;
+
+};
+
+export const resendEmailOTP = async (
+  email
+) => {
+
+  const response =
+    await api.post(
+      "/auth/resend-email-otp",
+      {
+        email,
+      }
+    );
+
+  return response.data;
+
+};
+
+// =====================================================
+// FORGOT PASSWORD
+// =====================================================
+
+export const forgotPassword = async (
+  email
+) => {
+
+  const response =
+    await api.post(
+      "/auth/forgot-password",
+      {
+        email,
+      }
+    );
+
+  return response.data;
+
+};
+
+export const verifyResetOTP = async (
+  email,
+  otp
+) => {
+
+  const response =
+    await api.post(
+      "/auth/verify-reset-otp",
+      {
+        email,
+        otp,
+      }
+    );
+
+  return response.data;
+
+};
+
+export const resetPassword = async (
+  email,
+  resetToken,
+  newPassword
+) => {
+
+  const response =
+    await api.post(
+      "/auth/reset-password",
+      {
+        email,
+        resetToken,
+        newPassword,
+      }
+    );
+
+  return response.data;
+
+};
+
+// =====================================================
+// CURRENT USER
+// =====================================================
 
 export const getCurrentUser = async () => {
-    const response = await api.get("/auth/me");
-    return response.data;
+
+  const response =
+    await api.get(
+      "/auth/me"
+    );
+
+  return response.data;
+
 };
 
-// =====================================
+// =====================================================
+// DID
+// =====================================================
+
+export const generateDIDChallenge = async () => {
+
+  const response =
+    await api.get(
+      "/auth/did/challenge"
+    );
+
+  return response.data;
+
+};
+
+export const enrollDIDPublicKey = async (
+  publicKey
+) => {
+
+  const response =
+    await api.post(
+      "/auth/did/enroll",
+      {
+        publicKey,
+      }
+    );
+
+  return response.data;
+
+};
+
+export const verifyDIDSignature = async (
+  challenge,
+  signature,
+  publicKey
+) => {
+
+  const response =
+    await api.post(
+      "/auth/did/verify",
+      {
+        challenge,
+        signature,
+        publicKey,
+      }
+    );
+
+  return response.data;
+
+};
+
+// =====================================================
+// LOGOUT
+// =====================================================
+
+export const logoutUser = () => {
+
+  localStorage.removeItem("token");
+
+  delete api.defaults.headers.common.Authorization;
+
+};
+
+// =====================================================
 // DASHBOARD
-// =====================================
+// =====================================================
 
 export const fetchDashboardStats = async () => {
-  const token = localStorage.getItem("token");
 
-  const response = await api.get("/dashboard/stats", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const response =
+    await api.get(
+      "/dashboard/stats"
+    );
 
-  return response.data?.data ?? response.data;
+  return response.data;
+
 };
+
 export const fetchRecentActivity = async () => {
-    return [];
+
+  const response =
+    await api.get(
+      "/dashboard/activity"
+    );
+
+  return response.data;
+
 };
 
 export const fetchBlockchainStatus = async () => {
-    const response = await api.get(
-        "/dashboard/blockchain-status"
+
+  const response =
+    await api.get(
+      "/dashboard/blockchain-status"
     );
 
-    return response.data;
+  return response.data;
+
 };
 
-// =====================================
-// IDENTITY MANAGEMENT / USERS
-// =====================================
+// =====================================================
+// USERS
+// =====================================================
 
 export const fetchUsers = async () => {
-    const response = await api.get("/users");
-    return response.data;
-};
 
-export const fetchUserById = async (id) => {
-    const response = await api.get(`/users/${id}`);
-    return response.data;
-};
-
-export const createUser = async (data) => {
-    const response = await api.post("/users", data);
-    return response.data;
-};
-
-export const updateUser = async (id, data) => {
-    const response = await api.put(`/users/${id}`, data);
-    return response.data;
-};
-
-export const deleteUser = async (id) => {
-    const response = await api.delete(`/users/${id}`);
-    return response.data;
-};
-
-export const updateUserRole = async (id, roleId) => {
-    const response = await api.patch(
-        `/users/${id}/role`,
-        { roleId }
+  const response =
+    await api.get(
+      "/users"
     );
 
-    return response.data;
+  return response.data;
+
 };
 
-// Compatibility names
-export const getUsers = fetchUsers;
-export const getUserById = fetchUserById;
+export const getUsers =
+  fetchUsers;
 
-// =====================================
-// ROLE MANAGEMENT
-// =====================================
+export const getUser = async (
+  id
+) => {
+
+  const response =
+    await api.get(
+      `/users/${id}`
+    );
+
+  return response.data;
+
+};
+
+export const updateUser = async (
+  id,
+  data
+) => {
+
+  const response =
+    await api.patch(
+      `/users/${id}`,
+      data
+    );
+
+  return response.data;
+
+};
+
+export const createUser = async (
+  data
+) => {
+
+  const response =
+    await api.post(
+      "/users",
+      data
+    );
+
+  return response.data;
+
+};
+
+export const updateUserRole = async (
+  id,
+  roleId,
+  organization
+) => {
+
+  const response =
+    await api.patch(
+      `/users/${id}/role`,
+      {
+        roleId,
+        organization,
+      }
+    );
+
+  return response.data;
+
+};
+
+export const deleteUser = async (
+  id
+) => {
+
+  const response =
+    await api.delete(
+      `/users/${id}`
+    );
+
+  return response.data;
+
+};
+
+// =====================================================
+// ROLES
+// =====================================================
 
 export const fetchRoles = async () => {
-    const response = await api.get("/roles");
-    return response.data;
-};
 
-export const fetchRoleById = async (id) => {
-    const response = await api.get(`/roles/${id}`);
-    return response.data;
-};
-
-export const createRole = async (data) => {
-    const response = await api.post("/roles", data);
-    return response.data;
-};
-
-export const updateRole = async (id, data) => {
-    const response = await api.put(
-        `/roles/${id}`,
-        data
+  const response =
+    await api.get(
+      "/roles"
     );
 
-    return response.data;
-};
+  return response.data;
 
-export const deleteRole = async (id) => {
-    const response = await api.delete(
-        `/roles/${id}`
-    );
-
-    return response.data;
-};
-
-export const fetchPermissions = async () => {
-    const response = await api.get(
-        "/roles/permissions"
-    );
-
-    return response.data;
-};
-
-export const fetchRolePermissions = async (roleId) => {
-    const response = await api.get(
-        `/roles/${roleId}/permissions`
-    );
-
-    return response.data;
 };
 
 export const updateRolePermissions = async (
-    roleId,
-    permissionIds
+  roleId,
+  permissions
 ) => {
-    const response = await api.put(
-        `/roles/${roleId}/permissions`,
-        { permissionIds }
+
+  const response =
+    await api.patch(
+      `/roles/${roleId}/permissions`,
+      {
+        permissions,
+      }
     );
 
-    return response.data;
+  return response.data;
+
 };
 
-// Compatibility names
-export const getRoles = fetchRoles;
-export const getRoleById = fetchRoleById;
-export const getPermissions = fetchPermissions;
-
-// =====================================
-// ASSET MANAGEMENT
-// =====================================
+// =====================================================
+// ASSETS
+// =====================================================
 
 export const fetchAssets = async () => {
-    const response = await api.get("/assets");
-    return response.data;
-};
 
-export const fetchAssetById = async (id) => {
-    const response = await api.get(
-        `/assets/${id}`
+  const response =
+    await api.get(
+      "/assets"
     );
 
-    return response.data;
+  return response.data;
+
 };
 
-export const createAsset = async (data) => {
-    const response = await api.post(
-        "/assets",
-        data
+export const fetchAssetById = async (
+  id
+) => {
+
+  const response =
+    await api.get(
+      `/assets/${id}`
     );
 
-    return response.data;
+  return response.data;
+
 };
 
-export const updateAsset = async (id, data) => {
-    const response = await api.put(
-        `/assets/${id}`,
-        data
+// =====================================================
+// CREATE ASSET WITH ACTUAL FILE
+// =====================================================
+
+export const createAsset = async (
+  data
+) => {
+
+  const response =
+    await api.post(
+      "/assets",
+      data,
+      {
+        headers: {
+          "Content-Type":
+            "multipart/form-data",
+        },
+      }
     );
 
-    return response.data;
+  return response.data;
+
 };
 
-export const deleteAsset = async (id) => {
-    const response = await api.delete(
-        `/assets/${id}`
+export const transferAsset = async (
+  id,
+  data
+) => {
+
+  const response =
+    await api.post(
+      `/assets/${id}/transfer`,
+      data
     );
 
-    return response.data;
+  return response.data;
+
 };
 
-export const allocateAsset = async (id, data) => {
-    const response = await api.post(
-        `/assets/${id}/allocate`,
-        data
-    );
-
-    return response.data;
-};
-
-export const transferAsset = async (id, data) => {
-    const response = await api.post(
-        `/assets/${id}/transfer`,
-        data
-    );
-
-    return response.data;
-};
-
-// Compatibility names
-export const getAssets = fetchAssets;
-export const getAssetById = fetchAssetById;
-
-// =====================================
+// =====================================================
 // TRANSACTIONS
-// =====================================
+// =====================================================
 
 export const fetchTransactions = async () => {
-    const response = await api.get(
-        "/transactions"
+
+  const response =
+    await api.get(
+      "/transactions"
     );
 
-    return response.data;
+  return response.data;
+
 };
 
-export const fetchTransactionById = async (id) => {
-    const response = await api.get(
-        `/transactions/${id}`
+export const fetchTransactionById = async (
+  id
+) => {
+
+  const response =
+    await api.get(
+      `/transactions/${id}`
     );
 
-    return response.data;
+  return response.data;
+
 };
 
-export const createTransaction = async (data) => {
-    const response = await api.post(
-        "/transactions",
-        data
-    );
-
-    return response.data;
-};
-
-export const fetchRecentTransactions = async () => {
-    const response = await api.get(
-        "/transactions/recent"
-    );
-
-    return response.data;
-};
-
-// Compatibility names
-export const getTransactions = fetchTransactions;
-export const getTransactionById = fetchTransactionById;
-
-// =====================================
-// AUDIT TRAIL
-// =====================================
-
-export const fetchAuditLogs = async () => {
-    const response = await api.get("/audit");
-    return response.data;
-};
-
-export const fetchAuditLogById = async (id) => {
-    const response = await api.get(
-        `/audit/${id}`
-    );
-
-    return response.data;
-};
+// =====================================================
+// AUDIT
+// =====================================================
 
 export const fetchAuditTrail = async () => {
-    const response = await api.get("/audit");
-    return response.data;
-};
 
-export const getAuditTrail = async () => {
-    const response = await api.get("/audit");
-    return response.data;
-};
-
-// =====================================
-// BLOCKCHAIN
-// =====================================
-
-export const getBlockchainStatus = async () => {
-    const response = await api.get(
-        "/blockchain/status"
+  const response =
+    await api.get(
+      "/audit"
     );
 
-    return response.data;
+  return response.data;
+
 };
 
-// =====================================
+// =====================================================
 // DEFAULT EXPORT
-// =====================================
+// =====================================================
 
 export default api;

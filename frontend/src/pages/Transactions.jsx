@@ -30,42 +30,196 @@ function Transactions() {
     useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     loadTransactions();
   }, []);
 
+  // ---------------------------------------------------------
+  // NORMALIZE BACKEND TRANSACTION
+  // ---------------------------------------------------------
+
+  const normalizeTransaction = (tx) => {
+    const rawOperation = String(
+      tx?.operation ||
+      tx?.type ||
+      ""
+    ).toUpperCase();
+
+    let operation = rawOperation;
+
+    if (rawOperation === "CREATE_ASSET") {
+      operation = "CREATE";
+    } else if (rawOperation === "MINT_NFT") {
+      operation = "MINT";
+    } else if (rawOperation === "TRANSFER_ASSET") {
+      operation = "TRANSFER";
+    }
+
+    const rawStatus = String(
+      tx?.status || "UNKNOWN"
+    ).toUpperCase();
+
+    return {
+      ...tx,
+
+      // Keep backend operation
+      originalOperation: rawOperation,
+
+      // Frontend operation
+      operation,
+
+      // IDs
+      txId:
+        tx?.txId ??
+        tx?.transactionId ??
+        tx?.blockchainTxId ??
+        tx?.blockchain_tx_id ??
+        tx?.id ??
+        "",
+
+      transactionId:
+        tx?.transactionId ??
+        tx?.txId ??
+        tx?.blockchainTxId ??
+        tx?.blockchain_tx_id ??
+        tx?.id ??
+        "",
+
+      id:
+        tx?.id ??
+        tx?.txId ??
+        tx?.transactionId ??
+        "",
+
+      // Asset
+      assetId:
+        tx?.assetId ??
+        tx?.asset_id ??
+        "",
+
+      assetName:
+        tx?.assetName ??
+        tx?.asset_name ??
+        "",
+
+      // Users
+      initiatedBy:
+        tx?.initiatedBy ??
+        tx?.initiated_by ??
+        "",
+
+      user:
+        tx?.user ??
+        tx?.initiatedBy ??
+        tx?.initiated_by ??
+        "",
+
+      userName:
+        tx?.userName ??
+        tx?.initiatedByName ??
+        tx?.initiated_by_name ??
+        tx?.user ??
+        tx?.initiatedBy ??
+        tx?.initiated_by ??
+        "",
+
+      fromUser:
+        tx?.fromUser ??
+        tx?.from_user ??
+        "",
+
+      toUser:
+        tx?.toUser ??
+        tx?.to_user ??
+        "",
+
+      // Status
+      status: rawStatus,
+
+      // Timestamp
+      timestamp:
+        tx?.timestamp ??
+        tx?.createdAt ??
+        tx?.created_at ??
+        null,
+
+      // Blockchain
+      blockchainTxId:
+        tx?.blockchainTxId ??
+        tx?.blockchain_tx_id ??
+        tx?.txId ??
+        tx?.transactionId ??
+        tx?.id ??
+        "",
+
+      network:
+        tx?.network ||
+        "Hyperledger Fabric",
+
+      channel:
+        tx?.channel ||
+        "crypta-channel",
+
+      chaincode:
+        tx?.chaincode ||
+        "crypta-contract",
+    };
+  };
+
+  // ---------------------------------------------------------
+  // LOAD TRANSACTIONS
+  // ---------------------------------------------------------
+
   const loadTransactions = async () => {
     try {
       setLoading(true);
+      setError("");
 
-      const response = await fetchTransactions();
+      const response =
+        await fetchTransactions();
 
       const txData =
-  response?.data?.transactions ||
-  response?.data ||
-  response?.transactions ||
-  response ||
-  [];
+        response?.data?.transactions ||
+        response?.data ||
+        response?.transactions ||
+        response ||
+        [];
 
-setTransactions(
-  Array.isArray(txData)
-    ? txData
-    : []
-);
+      const normalized =
+        Array.isArray(txData)
+          ? txData.map(normalizeTransaction)
+          : [];
+
+      setTransactions(normalized);
+
     } catch (error) {
       console.error(
         "Transaction loading error:",
         error
+      );
+
+      setTransactions([]);
+
+      setError(
+        error?.response?.data?.message ||
+        error?.message ||
+        "Unable to load transactions."
       );
     } finally {
       setLoading(false);
     }
   };
 
+  // ---------------------------------------------------------
+  // FILTER
+  // ---------------------------------------------------------
+
   const filteredTransactions = useMemo(() => {
     return transactions.filter((tx) => {
-      const query = search.toLowerCase();
+      const query =
+        search.toLowerCase().trim();
 
       const txId =
         tx.txId ||
@@ -81,6 +235,7 @@ setTransactions(
       const user =
         tx.userName ||
         tx.user ||
+        tx.initiatedBy ||
         "";
 
       const matchesSearch =
@@ -95,15 +250,17 @@ setTransactions(
           .toLowerCase()
           .includes(query);
 
-      const status = String(
-        tx.status || ""
-      ).toUpperCase();
+      const status =
+        String(
+          tx.status || ""
+        ).toUpperCase();
 
-      const operation = String(
-        tx.operation ||
-        tx.type ||
-        ""
-      ).toUpperCase();
+      const operation =
+        String(
+          tx.operation ||
+          tx.type ||
+          ""
+        ).toUpperCase();
 
       const matchesStatus =
         statusFilter === "ALL" ||
@@ -126,6 +283,10 @@ setTransactions(
     operationFilter,
   ]);
 
+  // ---------------------------------------------------------
+  // STATUS
+  // ---------------------------------------------------------
+
   const getStatusClass = (status) => {
     const value = String(
       status || ""
@@ -134,8 +295,7 @@ setTransactions(
     if (
       value.includes("success") ||
       value.includes("completed") ||
-      value.includes("confirmed") ||
-      value.includes("success")
+      value.includes("confirmed")
     ) {
       return "status-success";
     }
@@ -149,13 +309,18 @@ setTransactions(
 
     if (
       value.includes("failed") ||
-      value.includes("rejected")
+      value.includes("rejected") ||
+      value.includes("error")
     ) {
       return "status-danger";
     }
 
     return "status-neutral";
   };
+
+  // ---------------------------------------------------------
+  // OPERATION
+  // ---------------------------------------------------------
 
   const getOperationClass = (operation) => {
     const value = String(
@@ -190,13 +355,49 @@ setTransactions(
     return "operation-default";
   };
 
+  const getOperationLabel = (operation) => {
+    switch (
+      String(operation || "").toUpperCase()
+    ) {
+      case "CREATE":
+        return "CREATE";
+
+      case "MINT":
+        return "MINT";
+
+      case "TRANSFER":
+        return "TRANSFER";
+
+      default:
+        return operation || "UNKNOWN";
+    }
+  };
+
+  // ---------------------------------------------------------
+  // FORMATTERS
+  // ---------------------------------------------------------
+
   const formatDate = (date) => {
     if (!date) return "—";
 
-    return new Date(date).toLocaleString([], {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
+    const parsedDate =
+      new Date(date);
+
+    if (
+      Number.isNaN(
+        parsedDate.getTime()
+      )
+    ) {
+      return String(date);
+    }
+
+    return parsedDate.toLocaleString(
+      [],
+      {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }
+    );
   };
 
   const shortenHash = (
@@ -206,7 +407,8 @@ setTransactions(
   ) => {
     if (!value) return "—";
 
-    const stringValue = String(value);
+    const stringValue =
+      String(value);
 
     if (
       stringValue.length <=
@@ -218,8 +420,14 @@ setTransactions(
     return `${stringValue.slice(
       0,
       start
-    )}...${stringValue.slice(-end)}`;
+    )}...${stringValue.slice(
+      -end
+    )}`;
   };
+
+  // ---------------------------------------------------------
+  // OPEN TRANSACTION
+  // ---------------------------------------------------------
 
   const openTransaction = async (tx) => {
     setModalOpen(true);
@@ -240,27 +448,49 @@ setTransactions(
       const response =
         await fetchTransactionById(txId);
 
+      const detail =
+        response?.data?.transaction ||
+        response?.data ||
+        response?.transaction ||
+        response ||
+        tx;
+
       setSelectedTransaction(
-        response?.data ??
-        response ??
-        tx
+        normalizeTransaction(detail)
       );
+
     } catch (error) {
       console.error(
         "Transaction details error:",
         error
       );
+
+      // Keep already loaded transaction
+      setSelectedTransaction(tx);
+
     } finally {
       setDetailsLoading(false);
     }
   };
 
+  // ---------------------------------------------------------
+  // TABLE
+  // ---------------------------------------------------------
+
   const columns = [
     {
       key: "txId",
       label: "TRANSACTION ID",
+
       render: (_, tx) => (
-        <span className="transaction-hash">
+        <span
+          className="transaction-hash"
+          title={
+            tx.txId ||
+            tx.transactionId ||
+            tx.id
+          }
+        >
           {shortenHash(
             tx.txId ||
             tx.transactionId ||
@@ -273,10 +503,10 @@ setTransactions(
     {
       key: "operation",
       label: "OPERATION",
+
       render: (_, tx) => {
         const operation =
           tx.operation ||
-          tx.type ||
           "UNKNOWN";
 
         return (
@@ -285,7 +515,9 @@ setTransactions(
               operation
             )}`}
           >
-            {operation}
+            {getOperationLabel(
+              operation
+            )}
           </span>
         );
       },
@@ -294,8 +526,10 @@ setTransactions(
     {
       key: "asset",
       label: "ASSET",
+
       render: (_, tx) => (
         <div className="transaction-asset">
+
           <strong>
             {tx.assetName ||
               "Blockchain Asset"}
@@ -303,8 +537,9 @@ setTransactions(
 
           <span>
             {tx.assetId ||
-              "ASSET-PENDING"}
+              "—"}
           </span>
+
         </div>
       ),
     },
@@ -312,33 +547,40 @@ setTransactions(
     {
       key: "user",
       label: "INITIATED BY",
-      render: (_, tx) => (
-        <div className="transaction-user">
-          <span>
-            {(tx.userName ||
-              tx.user ||
-              "U")
-              .charAt(0)
-              .toUpperCase()}
-          </span>
 
-          <strong>
-            {tx.userName ||
-              tx.user ||
-              "Unknown User"}
-          </strong>
-        </div>
-      ),
+      render: (_, tx) => {
+        const userName =
+          tx.userName ||
+          tx.user ||
+          tx.initiatedBy ||
+          "Unknown User";
+
+        return (
+          <div className="transaction-user">
+
+            <span>
+              {String(userName)
+                .charAt(0)
+                .toUpperCase()}
+            </span>
+
+            <strong>
+              {userName}
+            </strong>
+
+          </div>
+        );
+      },
     },
 
     {
       key: "timestamp",
       label: "TIMESTAMP",
+
       render: (_, tx) => (
         <span className="transaction-time">
           {formatDate(
-            tx.timestamp ||
-            tx.createdAt
+            tx.timestamp
           )}
         </span>
       ),
@@ -347,6 +589,7 @@ setTransactions(
     {
       key: "status",
       label: "STATUS",
+
       render: (value) => (
         <span
           className={`status-badge ${getStatusClass(
@@ -354,7 +597,8 @@ setTransactions(
           )}`}
         >
           <span className="status-dot"></span>
-          {value || "Unknown"}
+
+          {value || "UNKNOWN"}
         </span>
       ),
     },
@@ -362,6 +606,7 @@ setTransactions(
     {
       key: "action",
       label: "",
+
       render: (_, tx) => (
         <button
           className="table-action"
@@ -376,6 +621,10 @@ setTransactions(
     },
   ];
 
+  // ---------------------------------------------------------
+  // SUMMARY COUNTS
+  // ---------------------------------------------------------
+
   const successfulCount =
     transactions.filter((tx) =>
       [
@@ -383,7 +632,9 @@ setTransactions(
         "COMPLETED",
         "CONFIRMED",
       ].includes(
-        String(tx.status || "").toUpperCase()
+        String(
+          tx.status || ""
+        ).toUpperCase()
       )
     ).length;
 
@@ -393,7 +644,9 @@ setTransactions(
         "PENDING",
         "PROCESSING",
       ].includes(
-        String(tx.status || "").toUpperCase()
+        String(
+          tx.status || ""
+        ).toUpperCase()
       )
     ).length;
 
@@ -402,10 +655,17 @@ setTransactions(
       [
         "FAILED",
         "REJECTED",
+        "ERROR",
       ].includes(
-        String(tx.status || "").toUpperCase()
+        String(
+          tx.status || ""
+        ).toUpperCase()
       )
     ).length;
+
+  // ---------------------------------------------------------
+  // UI
+  // ---------------------------------------------------------
 
   return (
     <div className="app-layout">
@@ -433,6 +693,7 @@ setTransactions(
           <div className="page-header">
 
             <div>
+
               <div className="page-eyebrow">
                 CRYPTA SHIELD / BLOCKCHAIN LEDGER
               </div>
@@ -445,6 +706,7 @@ setTransactions(
                 Monitor every operation recorded
                 on the distributed ledger.
               </p>
+
             </div>
 
             <Button
@@ -463,11 +725,13 @@ setTransactions(
           <div className="transaction-summary">
 
             <div className="transaction-summary-card">
+
               <div className="transaction-summary-icon gold">
                 ⇄
               </div>
 
               <div>
+
                 <span>
                   TOTAL TRANSACTIONS
                 </span>
@@ -475,16 +739,20 @@ setTransactions(
                 <strong>
                   {transactions.length}
                 </strong>
+
               </div>
+
             </div>
 
 
             <div className="transaction-summary-card">
+
               <div className="transaction-summary-icon success">
                 ✓
               </div>
 
               <div>
+
                 <span>
                   CONFIRMED
                 </span>
@@ -492,16 +760,20 @@ setTransactions(
                 <strong>
                   {successfulCount}
                 </strong>
+
               </div>
+
             </div>
 
 
             <div className="transaction-summary-card">
+
               <div className="transaction-summary-icon warning">
                 ◷
               </div>
 
               <div>
+
                 <span>
                   PENDING
                 </span>
@@ -509,16 +781,20 @@ setTransactions(
                 <strong>
                   {pendingCount}
                 </strong>
+
               </div>
+
             </div>
 
 
             <div className="transaction-summary-card">
+
               <div className="transaction-summary-icon danger">
                 !
               </div>
 
               <div>
+
                 <span>
                   FAILED
                 </span>
@@ -526,7 +802,9 @@ setTransactions(
                 <strong>
                   {failedCount}
                 </strong>
+
               </div>
+
             </div>
 
           </div>
@@ -539,6 +817,7 @@ setTransactions(
             <div className="card-header">
 
               <div>
+
                 <span className="card-eyebrow">
                   IMMUTABLE LEDGER
                 </span>
@@ -546,6 +825,7 @@ setTransactions(
                 <h2>
                   Transaction History
                 </h2>
+
               </div>
 
               <div className="ledger-live">
@@ -569,7 +849,9 @@ setTransactions(
                   placeholder="Search transaction, asset, user..."
                   value={search}
                   onChange={(e) =>
-                    setSearch(e.target.value)
+                    setSearch(
+                      e.target.value
+                    )
                   }
                 />
 
@@ -584,6 +866,7 @@ setTransactions(
                   )
                 }
               >
+
                 <option value="ALL">
                   All Operations
                 </option>
@@ -607,6 +890,7 @@ setTransactions(
                 <option value="DELETE">
                   Delete
                 </option>
+
               </select>
 
 
@@ -618,6 +902,7 @@ setTransactions(
                   )
                 }
               >
+
                 <option value="ALL">
                   All Status
                 </option>
@@ -637,9 +922,17 @@ setTransactions(
                 <option value="FAILED">
                   Failed
                 </option>
+
               </select>
 
             </div>
+
+
+            {error && (
+              <div className="form-error">
+                {error}
+              </div>
+            )}
 
 
             <Table
@@ -662,6 +955,7 @@ setTransactions(
             </div>
 
             <div>
+
               <h3>
                 Ledger Integrity Verified
               </h3>
@@ -672,16 +966,21 @@ setTransactions(
                 and protected against unauthorized
                 modification.
               </p>
+
             </div>
 
             <div className="ledger-sync">
+
               <span className="status-dot"></span>
+
               Synchronized
+
             </div>
 
           </div>
 
         </main>
+
       </div>
 
 
@@ -699,10 +998,13 @@ setTransactions(
         {detailsLoading ? (
 
           <div className="transaction-loading">
+
             <div className="loading-spinner"></div>
+
             <span>
               Verifying ledger transaction...
             </span>
+
           </div>
 
         ) : selectedTransaction ? (
@@ -716,15 +1018,17 @@ setTransactions(
               </div>
 
               <div>
+
                 <span className="card-eyebrow">
                   LEDGER RECORD
                 </span>
 
                 <h2>
-                  {selectedTransaction.operation ||
-                    selectedTransaction.type ||
-                    "Blockchain Operation"}
+                  {getOperationLabel(
+                    selectedTransaction.operation
+                  )}
                 </h2>
+
               </div>
 
               <span
@@ -732,9 +1036,12 @@ setTransactions(
                   selectedTransaction.status
                 )}`}
               >
+
                 <span className="status-dot"></span>
+
                 {selectedTransaction.status ||
-                  "Unknown"}
+                  "UNKNOWN"}
+
               </span>
 
             </div>
@@ -743,47 +1050,55 @@ setTransactions(
             <div className="transaction-detail-grid">
 
               <div className="transaction-detail-item full">
+
                 <span>
                   TRANSACTION ID
                 </span>
 
                 <strong className="full-hash">
+
                   {selectedTransaction.txId ||
                     selectedTransaction.transactionId ||
                     selectedTransaction.id ||
                     "—"}
+
                 </strong>
+
               </div>
 
 
               <div className="transaction-detail-item">
+
                 <span>
                   OPERATION
                 </span>
 
                 <strong>
-                  {selectedTransaction.operation ||
-                    selectedTransaction.type ||
-                    "—"}
+                  {getOperationLabel(
+                    selectedTransaction.operation
+                  )}
                 </strong>
+
               </div>
 
 
               <div className="transaction-detail-item">
+
                 <span>
                   TIMESTAMP
                 </span>
 
                 <strong>
                   {formatDate(
-                    selectedTransaction.timestamp ||
-                    selectedTransaction.createdAt
+                    selectedTransaction.timestamp
                   )}
                 </strong>
+
               </div>
 
 
               <div className="transaction-detail-item">
+
                 <span>
                   ASSET
                 </span>
@@ -793,10 +1108,26 @@ setTransactions(
                     selectedTransaction.assetId ||
                     "—"}
                 </strong>
+
               </div>
 
 
               <div className="transaction-detail-item">
+
+                <span>
+                  ASSET ID
+                </span>
+
+                <strong>
+                  {selectedTransaction.assetId ||
+                    "—"}
+                </strong>
+
+              </div>
+
+
+              <div className="transaction-detail-item">
+
                 <span>
                   INITIATED BY
                 </span>
@@ -804,48 +1135,98 @@ setTransactions(
                 <strong>
                   {selectedTransaction.userName ||
                     selectedTransaction.user ||
+                    selectedTransaction.initiatedBy ||
                     "—"}
                 </strong>
+
               </div>
 
 
               <div className="transaction-detail-item">
+
+                <span>
+                  FROM USER
+                </span>
+
+                <strong>
+                  {selectedTransaction.fromUser ||
+                    "—"}
+                </strong>
+
+              </div>
+
+
+              <div className="transaction-detail-item">
+
+                <span>
+                  TO USER
+                </span>
+
+                <strong>
+                  {selectedTransaction.toUser ||
+                    "—"}
+                </strong>
+
+              </div>
+
+
+              <div className="transaction-detail-item">
+
                 <span>
                   NETWORK
                 </span>
 
                 <strong>
-                  {selectedTransaction.network ||
-                    "Hyperledger Fabric"}
+                  {selectedTransaction.network}
                 </strong>
+
               </div>
 
 
               <div className="transaction-detail-item">
+
                 <span>
                   CHANNEL
                 </span>
 
                 <strong>
-                  {selectedTransaction.channel ||
-                    "crypta-channel"}
+                  {selectedTransaction.channel}
                 </strong>
+
               </div>
 
 
               <div className="transaction-detail-item">
+
                 <span>
                   CHAINCODE
                 </span>
 
                 <strong>
-                  {selectedTransaction.chaincode ||
-                    "AssetContract"}
+                  {selectedTransaction.chaincode}
                 </strong>
+
               </div>
 
 
               <div className="transaction-detail-item">
+
+                <span>
+                  BLOCKCHAIN TX ID
+                </span>
+
+                <strong className="full-hash">
+
+                  {selectedTransaction.blockchainTxId ||
+                    "—"}
+
+                </strong>
+
+              </div>
+
+
+              <div className="transaction-detail-item">
+
                 <span>
                   BLOCK NUMBER
                 </span>
@@ -854,6 +1235,7 @@ setTransactions(
                   {selectedTransaction.blockNumber ||
                     "—"}
                 </strong>
+
               </div>
 
             </div>
@@ -876,9 +1258,12 @@ setTransactions(
 
             <div className="transaction-verified">
 
-              <span>✓</span>
+              <span>
+                ✓
+              </span>
 
               <div>
+
                 <strong>
                   Transaction cryptographically recorded
                 </strong>
@@ -888,6 +1273,7 @@ setTransactions(
                   distributed ledger and can be
                   independently audited.
                 </p>
+
               </div>
 
             </div>

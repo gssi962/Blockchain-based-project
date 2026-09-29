@@ -1,0 +1,25 @@
+{
+  "name": "crypta-chaincode",
+  "version": "1.0.0",
+  "description": "Crypta Shield Hyperledger Fabric Chaincode",
+  "main": "index.js",
+  "scripts": {
+    "start": "fabric-chaincode-node start",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "hyperledger",
+    "fabric",
+    "blockchain",
+    "crypta",
+    "nft",
+    "smart-contract"
+  ],
+  "author": "Crypta Shield Team",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "fabric-contract-api": "^2.5.8",
+    "fabric-shim": "^2.5.8"
+  }
+}

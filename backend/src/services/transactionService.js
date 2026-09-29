@@ -1,8 +1,15 @@
 const { pool } = require("../config/database");
 
-const getAllTransactions = async () => {
-    const [rows] = await pool.execute(
-        `
+
+// GET ALL TRANSACTIONS
+// Admin / Manager / Auditor -> all transactions
+// User -> only transactions related to that user
+const getAllTransactions = async ({
+    userId,
+    role
+} = {}) => {
+
+    let query = `
         SELECT
             id,
             operation,
@@ -14,14 +21,40 @@ const getAllTransactions = async () => {
             blockchain_tx_id,
             timestamp
         FROM transactions
+    `;
+
+    const params = [];
+
+    if (role === "role-user") {
+        query += `
+            WHERE initiated_by = ?
+               OR from_user = ?
+               OR to_user = ?
+        `;
+
+        params.push(
+            userId,
+            userId,
+            userId
+        );
+    }
+
+    query += `
         ORDER BY timestamp DESC
-        `
+    `;
+
+    const [rows] = await pool.execute(
+        query,
+        params
     );
 
     return rows;
 };
 
+
+// GET SINGLE TRANSACTION
 const getTransactionById = async (id) => {
+
     const [rows] = await pool.execute(
         `
         SELECT
@@ -48,8 +81,16 @@ const getTransactionById = async (id) => {
     return rows[0];
 };
 
-const getRecentTransactions = async (limit = 10) => {
-    const safeLimit = Math.min(Math.max(Number(limit) || 10, 1), 50);
+
+// GET RECENT TRANSACTIONS
+const getRecentTransactions = async (
+    limit = 10
+) => {
+
+    const safeLimit = Math.min(
+        Math.max(Number(limit) || 10, 1),
+        50
+    );
 
     const [rows] = await pool.query(
         `
@@ -72,8 +113,13 @@ const getRecentTransactions = async (limit = 10) => {
     return rows;
 };
 
+
 module.exports = {
+
     getAllTransactions,
+
     getTransactionById,
+
     getRecentTransactions
+
 };

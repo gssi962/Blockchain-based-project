@@ -1,11 +1,12 @@
 import { NavLink } from "react-router-dom";
+
 import { useAuth } from "../hooks/useAuth";
 
 const Sidebar = ({
   isOpen = true,
   onClose,
 }) => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const role = String(
     user?.role || "ADMIN"
@@ -23,7 +24,6 @@ const Sidebar = ({
         "USER",
       ],
     },
-
     {
       name: "Identity Management",
       path: "/identity",
@@ -33,14 +33,12 @@ const Sidebar = ({
         "MANAGER",
       ],
     },
-
     {
       name: "Role Management",
       path: "/roles",
       icon: "◇",
       roles: ["ADMIN"],
     },
-
     {
       name: "Asset Management",
       path: "/assets",
@@ -51,7 +49,6 @@ const Sidebar = ({
         "USER",
       ],
     },
-
     {
       name: "Transactions",
       path: "/transactions",
@@ -63,7 +60,6 @@ const Sidebar = ({
         "USER",
       ],
     },
-
     {
       name: "Audit Trail",
       path: "/audit-trail",
@@ -92,7 +88,9 @@ const Sidebar = ({
 
       <aside
         className={`sidebar ${
-          isOpen ? "sidebar-visible" : ""
+          isOpen
+            ? "sidebar-visible"
+            : ""
         }`}
       >
 
@@ -119,30 +117,32 @@ const Sidebar = ({
             MAIN MENU
           </p>
 
-          {visibleMenuItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              onClick={onClose}
-              className={({ isActive }) =>
-                `sidebar-link ${
-                  isActive
-                    ? "sidebar-link-active"
-                    : ""
-                }`
-              }
-            >
+          {visibleMenuItems.map(
+            (item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                onClick={onClose}
+                className={({
+                  isActive,
+                }) =>
+                  `sidebar-link ${
+                    isActive
+                      ? "sidebar-link-active"
+                      : ""
+                  }`
+                }
+              >
+                <span className="sidebar-link-icon">
+                  {item.icon}
+                </span>
 
-              <span className="sidebar-link-icon">
-                {item.icon}
-              </span>
-
-              <span className="sidebar-link-text">
-                {item.name}
-              </span>
-
-            </NavLink>
-          ))}
+                <span className="sidebar-link-text">
+                  {item.name}
+                </span>
+              </NavLink>
+            )
+          )}
 
         </nav>
 
@@ -150,25 +150,6 @@ const Sidebar = ({
         <div className="sidebar-bottom">
 
           <div className="sidebar-line"></div>
-
-          <button
-            className="sidebar-bottom-link"
-            onClick={() => {
-              // Settings page baad mein add kar sakte hain
-              console.log("Settings clicked");
-            }}
-          >
-            <span>⚙</span>
-            <span>Settings</span>
-          </button>
-
-          <button
-            className="sidebar-bottom-link logout-button"
-            onClick={logout}
-          >
-            <span>↪</span>
-            <span>Logout</span>
-          </button>
 
           {/* Security status */}
           <div className="sidebar-security">
@@ -179,6 +160,7 @@ const Sidebar = ({
 
             <div className="security-text">
               <strong>SECURE</strong>
+
               <span>
                 Blockchain Active
               </span>

@@ -15,9 +15,15 @@ router.get(
     controller.getDashboard
 );
 
+
 router.get(
     "/stats",
     authMiddleware,
+    (req, res, next) => {
+        console.log("🔥🔥 DASHBOARD /STATS ROUTE HIT");
+        console.log("USER:", req.user);
+        next();
+    },
     controller.getStats
 );
 

@@ -4,51 +4,134 @@ const auditService =
 const { success, failure } =
     require("../utils");
 
-const list = (req, res) => {
 
-    return success(
-        res,
-        auditService.getAllAuditLogs()
-    );
-};
+// GET ALL AUDIT LOGS
 
-const get = (req, res) => {
+const list = async (req, res) => {
+    try {
 
-    const audit =
-        auditService.getAuditLogById(req.params.id);
+        const logs =
+            await auditService.getAllAuditLogs();
 
-    if (!audit) {
+        return success(
+            res,
+            logs
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Audit list error:",
+            error
+        );
+
         return failure(
             res,
-            "Audit event not found",
-            404
+            "Failed to fetch audit logs",
+            500
         );
     }
-
-    return success(res, audit);
 };
 
-const stats = (req, res) => {
 
-    const logs =
-        auditService.getAllAuditLogs();
 
-    return success(res, {
-        totalEvents: logs.length,
+// GET SINGLE AUDIT LOG
 
-        identityEvents: logs.filter(
-            item => item.category === "IDENTITY"
-        ).length,
+const get = async (req, res) => {
 
-        assetEvents: logs.filter(
-            item => item.category === "ASSET"
-        ).length,
+    try {
 
-        transactionEvents: logs.filter(
-            item => item.category === "TRANSACTION"
-        ).length
-    });
+        const audit =
+            await auditService.getAuditLogById(
+                req.params.id
+            );
+
+
+        if (!audit) {
+
+            return failure(
+                res,
+                "Audit event not found",
+                404
+            );
+        }
+
+
+        return success(
+            res,
+            audit
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Audit get error:",
+            error
+        );
+
+        return failure(
+            res,
+            "Failed to fetch audit log",
+            500
+        );
+    }
 };
+
+
+
+// AUDIT STATS
+
+const stats = async (req, res) => {
+
+    try {
+
+        const logs =
+            await auditService.getAllAuditLogs();
+
+
+        return success(
+            res,
+            {
+                totalEvents:
+                    logs.length,
+
+                identityEvents:
+                    logs.filter(
+                        item =>
+                            item.category === "IDENTITY"
+                    ).length,
+
+                assetEvents:
+                    logs.filter(
+                        item =>
+                            item.category === "ASSET"
+                    ).length,
+
+                transactionEvents:
+                    logs.filter(
+                        item =>
+                            item.category === "TRANSACTION"
+                    ).length
+            }
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Audit stats error:",
+            error
+        );
+
+        return failure(
+            res,
+            "Failed to fetch audit stats",
+            500
+        );
+    }
+};
+
 
 module.exports = {
     list,
