@@ -337,7 +337,8 @@ function Login() {
       const verificationResponse =
         await verifyDIDSignature(
           challenge,
-          signature
+          signature,
+          identity.publicKeyPEM
         );
 
       if (
